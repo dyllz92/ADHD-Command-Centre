@@ -7,38 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum TaskStatus {
-  inbox
-  todo
-  doing
-  done
-}
-
-enum TaskEnergy {
-  low
-  med
-  high
-}
-
-enum TaskMode {
-  calls
-  admin
-  out
-  deep
-}
-
-enum FollowUpStatus {
-  queued
-  sent
-  snoozed
-  skipped
-}
-
-enum TemplateChannel {
-  sms
-  email
-}
-
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -49,22 +17,22 @@ model User {
 }
 
 model Task {
-  id              String      @id @default(cuid())
+  id              String   @id @default(cuid())
   title           String
-  status          TaskStatus  @default(inbox)
+  status          String   @default("inbox")
   dueAt           DateTime?
   estimateMinutes Int?
-  energy          TaskEnergy  @default(med)
-  mode            TaskMode    @default(admin)
-  tags            String      @default("")
-  pinnedToday     Boolean     @default(false)
+  energy          String   @default("med")
+  mode            String   @default("admin")
+  tags            String   @default("")
+  pinnedToday     Boolean  @default(false)
   parentId        String?
-  parent          Task?       @relation("TaskToTask", fields: [parentId], references: [id])
-  children        Task[]      @relation("TaskToTask")
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  parent          Task?    @relation("TaskToTask", fields: [parentId], references: [id])
+  children        Task[]   @relation("TaskToTask")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   userId          String?
-  user            User?       @relation(fields: [userId], references: [id])
+  user            User?    @relation(fields: [userId], references: [id])
 }
 
 model CheckIn {
@@ -91,19 +59,19 @@ model CalendarEvent {
 }
 
 model FollowUp {
-  id          String         @id @default(cuid())
+  id          String   @id @default(cuid())
   eventId     String?
-  status      FollowUpStatus @default(queued)
+  status      String   @default("queued")
   scheduledAt DateTime
   templateId  String?
-  createdAt   DateTime       @default(now())
-  template    Template?      @relation(fields: [templateId], references: [id])
+  createdAt   DateTime @default(now())
+  template    Template? @relation(fields: [templateId], references: [id])
 }
 
 model Template {
-  id        String          @id @default(cuid())
+  id        String   @id @default(cuid())
   name      String
-  channel   TemplateChannel @default(sms)
+  channel   String   @default("sms")
   body      String
   followUps FollowUp[]
 }
