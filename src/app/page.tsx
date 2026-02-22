@@ -6,6 +6,7 @@ import { WhatNowPanel } from "@/components/WhatNowPanel";
 import { UniNextStepCard } from "@/components/UniNextStepCard";
 import { prisma } from "@/lib/prisma";
 import { suggestNextAction } from "@/lib/suggestNextAction";
+import { getTodayState } from "@/lib/taskUtils";
 
 export default async function HomePage() {
   const [tasks, checkIn, events, followUps, appState] = await Promise.all([
@@ -13,10 +14,14 @@ export default async function HomePage() {
     prisma.checkIn.findFirst({ orderBy: { createdAt: "desc" } }),
     prisma.calendarEvent.findMany({ orderBy: { startAt: "asc" } }),
     prisma.followUp.count({ where: { status: { in: ["queued", "snoozed"] } } }),
-    prisma.appState.findFirst()
+    prisma.appState.findFirst(),
   ]);
 
-  const topThree = tasks.filter((task) => task.pinnedToday && task.status !== "done").slice(0, 3);
+  const todayState = await getTodayState(prisma);
+
+  const topThree = tasks
+    .filter((task) => task.pinnedToday && task.status !== "done")
+    .slice(0, 3);
   const nextAppointment = events.find((event) => event.startAt > new Date());
 
   const minutesUntilNext = nextAppointment
@@ -30,13 +35,17 @@ export default async function HomePage() {
       water: checkIn?.water ?? false,
       moved: checkIn?.moved ?? false,
       lastCheckInAt: checkIn?.createdAt,
-      capacity: (checkIn?.capacity as "low" | "med" | "high" | undefined) ?? null
+      capacity:
+        (checkIn?.capacity as "low" | "med" | "high" | undefined) ?? null,
     },
     followUpsDue: followUps,
     hasUniNextStep: Boolean(appState?.uniNextStep),
     hasPinnedToday: topThree.length > 0,
-    quickWinAvailable: tasks.some((task) => task.estimateMinutes && task.estimateMinutes <= 10),
-    deepFocusAvailable: tasks.some((task) => task.mode === "deep")
+    quickWinAvailable: tasks.some(
+      (task) => task.estimateMinutes && task.estimateMinutes <= 10,
+    ),
+    deepFocusAvailable: tasks.some((task) => task.mode === "deep"),
+    // Optionally pass todayState to suggestion engine or UI as needed
   });
 
   return (
@@ -55,7 +64,10 @@ export default async function HomePage() {
             <p className="text-sm text-ink-500">
               Keep it gentle. Pick just three tasks for today.
             </p>
-            <Link href="/todo" className="mt-3 inline-block text-sm font-medium text-calm-500">
+            <Link
+              href="/todo"
+              className="mt-3 inline-block text-sm font-medium text-calm-500"
+            >
               Pick my Top 3
             </Link>
           </Card>
@@ -71,17 +83,21 @@ export default async function HomePage() {
       <Card title="Next appointment">
         {nextAppointment ? (
           <div className="space-y-1">
-            <div className="text-base font-semibold text-ink-900">{nextAppointment.title}</div>
+            <div className="text-base font-semibold text-ink-900">
+              {nextAppointment.title}
+            </div>
             <div className="text-sm text-ink-500">
               {nextAppointment.startAt.toLocaleString("en-AU", {
                 weekday: "short",
                 hour: "numeric",
-                minute: "2-digit"
+                minute: "2-digit",
               })}
             </div>
           </div>
         ) : (
-          <p className="text-sm text-ink-500">Connect Google Calendar to see your next event.</p>
+          <p className="text-sm text-ink-500">
+            Connect Google Calendar to see your next event.
+          </p>
         )}
       </Card>
 
@@ -94,9 +110,18 @@ export default async function HomePage() {
         }
       >
         <div className="flex flex-wrap gap-2">
-          <StatusPill label="Eat" state={checkIn?.eaten ? "good" : "attention"} />
-          <StatusPill label="Water" state={checkIn?.water ? "good" : "attention"} />
-          <StatusPill label="Move" state={checkIn?.moved ? "good" : "neutral"} />
+          <StatusPill
+            label="Eat"
+            state={checkIn?.eaten ? "good" : "attention"}
+          />
+          <StatusPill
+            label="Water"
+            state={checkIn?.water ? "good" : "attention"}
+          />
+          <StatusPill
+            label="Move"
+            state={checkIn?.moved ? "good" : "neutral"}
+          />
         </div>
       </Card>
 
@@ -117,7 +142,9 @@ export default async function HomePage() {
         <div className="flex items-center justify-between">
           <div>
             <div className="text-base font-semibold">21°C · Partly cloudy</div>
-            <div className="text-sm text-ink-500">{appState?.weatherLocation ?? "Sydney, NSW"}</div>
+            <div className="text-sm text-ink-500">
+              {appState?.weatherLocation ?? "Sydney, NSW"}
+            </div>
           </div>
           <div className="text-sm text-ink-500">Tomorrow 23°C</div>
         </div>
